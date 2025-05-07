@@ -1,0 +1,142 @@
+#include<iostream>
+#include<GL/glut.h>
+#include<cmath>
+using namespace std;
+
+int triangle[3][2] = {{100, 100}, {150, 200}, {200, 100}};
+int choice;
+int sx = 1, sy = 1;
+int angle = 0, xr = 0, yr = 0;
+char axis;
+
+void init() {
+    glClearColor(1, 1, 1, 1);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(-300, 300, -300, 300);
+}
+
+void draTri(int tri[3][2]) {
+    glBegin(GL_TRIANGLES);
+    for (int i = 0; i < 3; i++)
+        glVertex2i(tri[i][0], tri[i][1]);
+    glEnd();
+    glFlush();
+}
+
+void copyTri(int dest[3][2], int src[3][2]) {
+    for (int i = 0; i < 3; i++) {
+        dest[i][0] = src[i][0];
+        dest[i][1] = src[i][1];
+    }
+}
+
+void scale(int tri[3][2], int sx, int sy) {
+    for (int i = 0; i < 3; i++) {
+        tri[i][0] = tri[i][0] * sx;
+        tri[i][1] = tri[i][1] * sy;
+    }
+}
+
+void rotation(int tri[3][2], int angle, int xr, int yr) {
+    float theta = angle * 3.14159 / 180;
+    for (int i = 0; i < 3; i++) {
+        float x = tri[i][0] - xr;
+        float y = tri[i][1] - yr;
+        tri[i][0] = xr + (x * cos(theta) - y * sin(theta));
+        tri[i][1] = yr + (x * sin(theta) + y * cos(theta));
+    }
+}
+
+
+void reflect(int tri[3][2],char axis)
+{
+  for(int i=0;i<3;i++)
+  {
+   if(axis=='x')
+   {
+     tri[i][1]=-tri[i][1];
+   }
+   else if(axis=='y')
+   {
+     tri[i][0]=-tri[i][0];
+   }
+   else if(axis=='o')
+   {
+    tri[i][0]=-tri[i][0];
+    tri[i][1]=-tri[i][1];
+   }
+}
+
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    int transform[3][2];
+    glColor3f(1, 0, 0); 
+    draTri(triangle);  
+
+    copyTri(transform, triangle);
+
+    if (choice == 1)
+     {
+        scale(transform, sx, sy);
+    } 
+    else if (choice == 2) 
+    {
+        rotation(transform, angle, 100,200);
+    }
+    else
+    {
+       reflect(transform,axis);
+    }
+
+    glColor3f(0, 1, 0); 
+    draTri(transform);  
+
+   
+    glColor3f(0, 0, 0); 
+    glBegin(GL_LINES);
+    glVertex2i(250, 0); glVertex2i(-250, 0); 
+    glVertex2i(0, 250); glVertex2i(0, -250); 
+    glEnd();
+    glFlush();
+}
+
+int main(int argc, char **argv) {
+    cout << "Choose transformation:\n1. Scaling\n2. Rotation\n3. Reflection \nEnter choice: ";
+    cin >> choice;
+
+    if (choice == 1) 
+    {
+        cout << "Enter scaling factors (sx sy): ";
+        cin >> sx >> sy;
+    } 
+    else if (choice == 2)
+     {
+        cout << "Enter angle of rotation: ";
+        cin >> angle;
+        
+    } 
+    else if(choice==3)
+    {
+        cout<<"Enter axis:";
+        cin>>axis;
+    }
+    else
+     {
+        cout << "Invalid choice.\n";
+        return 0;
+     }
+
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(500, 500);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("2D Transform");
+    init();
+    glutDisplayFunc(display);
+    glutMainLoop();
+    return 0;
+}
