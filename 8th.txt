@@ -1,0 +1,181 @@
+#include<GL/glut.h>
+#include<iostream>
+#include<vector>
+
+using namespace std;
+
+int xmin = 100, xmax = 300;
+int ymin = 100, ymax = 300;
+
+vector<pair<float,float>> points;
+vector<pair<float,float>> epoints;
+
+bool isComplete=false;
+bool isClipped=false;
+
+const int INSIDE = 0;
+const int LEFT = 1;
+const int RIGHT = 2;
+const int BOTTOM = 4;
+const int TOP = 8;
+
+
+float ox1, oy1, ox2, oy2;
+float cx1, cy1, cx2, cy2;
+
+
+int Region(float x, float y) {
+    int code = INSIDE;
+    if (x < xmin) code |= LEFT;
+    if (x > xmax) code |= RIGHT;
+    if (y < ymin) code |= BOTTOM;
+    if (y > ymax) code |= TOP;
+    return code;
+}
+
+bool cohen(float &x1, float &y1, float &x2, float &y2) {
+    int code1 = Region(x1, y1);
+    int code2 = Region(x2, y2);
+    bool accept = false;
+
+    while (true) {
+        if ((code1 | code2) == 0) {
+            accept = true;
+            break;
+        } else if (code1 & code2) {
+            break;
+        } else {
+            float x, y;
+            int outcode = (code1 != 0) ? code1 : code2;
+
+            float dx = x2 - x1;
+            float dy = y2 - y1;
+
+            if (outcode & TOP) {
+                y = ymax;
+                x = x1 + dx * (ymax - y1) / dy;
+            } else if (outcode & BOTTOM) {
+                y = ymin;
+                x = x1 + dx * (ymin - y1) / dy;
+            } else if (outcode & RIGHT) {
+                x = xmax;
+                y = y1 + dy * (xmax - x1) / dx;
+            } else if (outcode & LEFT) {
+                x = xmin;
+                y = y1 + dy * (xmin - x1) / dx;
+            }
+
+            if (outcode == code1) {
+                x1 = x;
+                y1 = y;
+                code1 = Region(x1, y1);
+            } else {
+                x2 = x;
+                y2 = y;
+                code2 = Region(x2, y2);
+            }
+        }
+    }
+
+    return accept;
+}
+
+void onmouse(int bt, int st, int x, int y) {
+    y = 500 - y; 
+
+    if (bt == GLUT_LEFT_BUTTON && st == GLUT_DOWN && !isComplete) {
+        points.push_back({float(x),float(y)});
+        glutPostRedisplay();
+    }
+}
+
+void key(unsigned char k, int x, int y) {
+    if (k == 'c' && points.size()>=3)
+    {
+        
+         isClipped =true;
+         epoints.clear(); 
+         
+         for(int i=0;i<points.size();i++)
+         {
+            float x1=points[i].first;
+            float y1=points[i].second;
+            float x2=points[(i+1)%points.size()].first;
+            float y2=points[(i+1)%points.size()].second;
+            
+            
+            if(cohen(x1,y1,x2,y2))
+            {
+               epoints.push_back({x1,y1});
+               epoints.push_back({x2,y2});
+            }
+         }
+         
+         glutPostRedisplay();
+    }
+    else if (k == 'r') 
+    {
+        points.clear();
+        epoints.clear();
+        isComplete=false;
+        isClipped = false;
+        glutPostRedisplay();
+    }  
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+
+   
+    glColor3f(1, 0, 0);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(xmin, ymin);
+    glVertex2f(xmax, ymin);
+    glVertex2f(xmax, ymax);
+    glVertex2f(xmin, ymax);
+    glEnd();
+
+    
+   if (!isClipped && points.size()) {
+        glColor3f(0, 0, 1);
+        glBegin(isComplete?GL_LINE_LOOP:GL_LINE_STRIP);
+        for(auto &p:points)
+        {
+          glVertex2f(p.first,p.second);
+        }
+        glEnd();
+    }
+
+    
+    if (isClipped) {
+        glColor3f(0, 1, 0);
+        glBegin(GL_LINES);
+        for(int i=0;i<points.size();i=i+2)
+        {
+          glVertex2f(epoints[i].first,epoints[i].second);
+          glVertex2f(epoints[i+1].first,epoints[i+1].second);
+        }
+        glEnd();
+    }
+
+    glFlush();
+}
+
+void init() {
+    glClearColor(1, 1, 1, 1);
+    glMatrixMode(GL_PROJECTION);
+    gluOrtho2D(0, 500, 0, 500);
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitWindowSize(500, 500);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutCreateWindow("Cohen-Sutherland Line Clipping");
+    init();
+    glutDisplayFunc(display);
+    glutMouseFunc(onmouse);
+    glutKeyboardFunc(key);
+    glutMainLoop();
+    return 0;
+}
